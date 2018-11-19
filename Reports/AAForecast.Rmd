@@ -1,0 +1,97 @@
+---
+title: "Anne Arundel County Population Estimate Forecast"
+author: "Rick Fisher"
+date: "September 4, 2018"
+description: "This code was devloped to forecast future population estimates for Anne Arundel County out twenty years based on historical data" 
+output:
+  word_document: default
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Load needed library files
+
+```{r}
+library(forecast)
+library(ggplot2)
+library(readxl)
+```
+
+# Import population data from Excel 
+
+```{r}
+aaPopR <- read_excel("C:/RStats/Forecast/Data/aaPop.xlsx")
+```
+
+# Preview first few columns of data to verify it was loaded into memory properly
+
+```{r}
+head(aaPopR)
+```
+
+# Plot the data
+
+```{r}
+aaPopPlot <- ggplot(aaPopR, aes(x = YEAR, y = POP)) +
+  geom_point() +
+  ggtitle("County Population Growth  1950-2017") +
+  scale_x_continuous(name = "Year") +
+  scale_y_continuous(name = "Population") +
+  theme_bw()
+print (aaPopPlot)
+```
+
+# Run a simple regression model plotting population vs year
+
+```{r}
+ aaPopReg <- lm(POP ~ YEAR, aaPopR)
+```
+
+# View regression model summary  
+
+```{r}
+ summary(aaPopReg)
+```
+
+# Visualize the regression model
+
+```{r}
+aaPopPlot <- ggplot(aaPopR, aes(x = YEAR, y = POP)) +
+    geom_point(shape = 1) +
+    geom_smooth(method = 'lm', se = FALSE) + 
+    ggtitle("County Population Growth 1950-2017") +
+    scale_x_continuous(name = "Year") +
+    scale_y_continuous(name = "Population") +
+    annotate("text", x=1985, y=300000, label = "R^2 == 0.983", parse=T) +
+    theme_bw()
+  print(aaPopPlot)
+```
+
+# Create a time series object 
+
+```{r}
+aaPopTs <- ts(aaPopR[2], start = c(1950,1), frequency = 1)
+```
+
+# Forecast a 20 year trend using Holt's method
+
+```{r}
+fcPopHolt <- holt(aaPopTs, h = 20)
+autoplot(fcPopHolt)
+checkresiduals(fcPopHolt)
+summary(fcPopHolt)
+```
+
+# Validate the use of Holt's forecast method by comparing results to ETS.
+
+```{r}
+fitaaPop <- ets(aaPopTs)
+summary(fitaaPop)
+autoplot(forecast(fitaaPop))
+checkresiduals(fitaaPop)
+```
